@@ -97,6 +97,11 @@
   .geo-labels.on { opacity: 1; }
   /* 政权名标注：不拦截点击 */
   .polity-labels { pointer-events: none; }
+  .ocean-labels text, .sea-labels text { pointer-events: auto; cursor: pointer; }
+  .sea-labels { opacity: 0; transition: opacity .3s ease; }
+  .sea-labels text { pointer-events: none; }
+  .sea-labels.on { opacity: 1; }
+  .sea-labels.on text { pointer-events: auto; }
   /* ---------- 时间轴 ---------- */
   .timebar {
     position: absolute; left: 20px; right: 20px; bottom: 14px;
@@ -722,6 +727,8 @@ const RIVERS_JSON = {"type":"FeatureCollection","features":[{"type":"Feature","p
   const gLand = gRoot.append("g");
   const gHist = gRoot.append("g");
   const gGrid = gRoot.append("g");
+  const gOcean = gRoot.append("g").attr("class", "ocean-labels");
+  const gSea = gRoot.append("g").attr("class", "sea-labels");
   const gRivers = gRoot.append("g");
   const gMount = gRoot.append("g");
   const gPolityLabels = gRoot.append("g").attr("class", "polity-labels");
@@ -881,6 +888,92 @@ const RIVERS_JSON = {"type":"FeatureCollection","features":[{"type":"Feature","p
       .text(k.name);
   });
 
+  // ---------- 大洋与重要海域（点击弹出海洋知识卡） ----------
+  const OCEANS = [
+    { name: "太 平 洋", en: "Pacific Ocean", lon: -138, lat: -2,
+      s: "四大洋中最大最深：面积约1.8亿平方千米，约占地球表面积三分之一；平均深度约4000米，马里亚纳海沟深达11034米，为世界最深处。",
+      k: "1519—1522年麦哲伦船队首次横渡并为之命名（恰逢风平浪静）；环太平洋火山地震带；1941年珍珠港事件揭开太平洋战争，1945年日本投降——二战亚洲太平洋战场的主战场。" },
+    { name: "大 西 洋", en: "Atlantic Ocean", lon: -33, lat: 22,
+      s: "第二大洋：面积约9165万平方千米，平均深度约3600米；中部有纵贯南北的大西洋中脊（海底山脉）。",
+      k: "1492年哥伦布横渡大西洋抵达美洲；16—19世纪三角贸易的『中程』航路；1941年《大西洋宪章》确立战后国际秩序的基本原则——新航路开辟后欧洲经济中心从地中海转到大西洋沿岸。" },
+    { name: "印 度 洋", en: "Indian Ocean", lon: 82, lat: -22,
+      s: "第三大洋：面积约7617万平方千米，平均深度约3800米；北部季风洋流冬夏反向，古代商船早知『候风往返』。",
+      k: "1405—1433年郑和七下西洋的主航路（经满剌加、古里）；1498年达·伽马循此到印度，开启葡萄牙的香料贸易；1869年苏伊士运河开通后成为欧洲—亚洲最短航路。" },
+    { name: "北 冰 洋", en: "Arctic Ocean", lon: 62, lat: 84,
+      s: "四大洋中最小最浅：面积约1475万平方千米，平均深度仅约1200米；大部分洋面常年结冰。",
+      k: "16—17世纪英国、荷兰航海家寻找东北航道与西北航道；二战期间盟国经北极航线向苏联运送物资；冷战时期北极成为美苏核潜艇博弈的前沿。" },
+    { name: "南 大 洋", en: "Southern Ocean", lon: 45, lat: -58,
+      s: "环绕南极洲的水域：面积约2033万平方千米，寒流（西风漂流）环行，沟通三大洋。",
+      k: "1911年阿蒙森首达南极点；1959年《南极条约》确立南极只用于和平目的——大陆漂移学说的化石证据也来自这块大陆周边。" }
+  ];
+  const SEAS = [
+    { name: "地中海", lon: 17, lat: 35.2,
+      s: "被欧亚非三洲环抱，古称『我们的海』；腓尼基人、希腊人最早在此航海经商。",
+      k: "布匿战争后罗马称霸地中海；1453年奥斯曼控制东西商路，是新航路开辟的重要背景。" },
+    { name: "红海", lon: 38.7, lat: 20.5,
+      s: "埃及—阿拉伯之间的狭长海域，自古沟通地中海与印度洋方向。",
+      k: "1869年苏伊士运河开通，地中海—红海—印度洋连成一线，英国『帝国生命线』经此直达印度。" },
+    { name: "波罗的海", lon: 19.5, lat: 57.5,
+      s: "北欧内海，中世纪汉萨同盟商船穿梭其间。",
+      k: "1700—1721年北方战争，彼得大帝击败瑞典夺得此海出海口，建都圣彼得堡——俄国走向波罗的海。" },
+    { name: "北海", lon: 2.5, lat: 55.5,
+      s: "欧洲西北边缘海，渔场与航路密布。",
+      k: "17世纪尼德兰『海上马车夫』往返于此；1916年日德兰海战是一战规模最大的海战。" },
+    { name: "加勒比海", lon: -75.5, lat: 14.5,
+      s: "美洲『地中海』，西班牙珍宝船队满载白银由此返航。",
+      k: "三角贸易『中程』的核心航路；1588年西班牙『无敌舰队』覆灭后，英法荷相继闯入加勒比。" },
+    { name: "阿拉伯海", lon: 64.5, lat: 14,
+      s: "印度洋西北部海域，自古为东西方海上贸易的十字路口。",
+      k: "郑和船队与达·伽马都经此前往印度西海岸（古里/卡利卡特）；1509年第乌海战后葡萄牙垄断东方航线数十年。" },
+    { name: "孟加拉湾", lon: 88, lat: 11,
+      s: "印度洋东北部大海湾，印度次大陆面向东方的门户。",
+      k: "1757年普拉西之战后英国东印度公司据此控制孟加拉——英国征服印度从这一带开始。" },
+    { name: "南海", lon: 114.5, lat: 13.5,
+      s: "海上丝绸之路的必经之海，宋元时期市舶司在此管理外贸。",
+      k: "中国古代『海上丝绸之路』主航路；郑和船队经满剌加（马六甲）进入印度洋。" },
+    { name: "马六甲海峡", lon: 100.3, lat: 3.2,
+      s: "连接太平洋与印度洋的咽喉要道。",
+      k: "1511年葡萄牙攻占马六甲，控制东西方航线；郑和七下西洋五次驻节满剌加。" },
+    { name: "白令海峡", lon: -169.5, lat: 65.5,
+      s: "亚洲与北美洲之间最窄处仅约85公里的海峡。",
+      k: "冰期『白令陆桥』是美洲原住民祖先的迁徙通道；1867年沙俄以720万美元将阿拉斯加售予美国。" },
+    { name: "几内亚湾", lon: 1, lat: 1.5,
+      s: "非洲西岸大海湾，古称『奴隶海岸』『黄金海岸』所在。",
+      k: "三角贸易『出程』的起运地——欧洲商船由此装载黑奴横渡大西洋。" }
+  ];
+  function oceanLabel(g, o, fontSize, color) {
+    const p = projection([o.lon, o.lat]);
+    if (!p) return;
+    const node = g.append("g")
+      .attr("transform", "translate(" + p[0] + "," + p[1] + ")")
+      .attr("data-trans", "translate(" + p[0] + "," + p[1] + ")");
+    node.append("text")
+      .attr("text-anchor", "middle")
+      .attr("font-size", fontSize)
+      .attr("font-style", "italic")
+      .attr("letter-spacing", fontSize >= 14 ? 3 : 0.5)
+      .attr("fill", color)
+      .attr("fill-opacity", .92)
+      .attr("paint-order", "stroke")
+      .attr("stroke", "#f4edde")
+      .attr("stroke-width", 2.6)
+      .text(o.name)
+      .on("click", () => showOceanCard(o));
+    node.append("title").text(o.name + " · 点击查看海洋知识");
+  }
+  OCEANS.forEach(o => oceanLabel(gOcean, o, 15.5, "#537d9b"));
+  SEAS.forEach(o => oceanLabel(gSea, o, 9.5, "#5c849c"));
+
+  function showOceanCard(o) {
+    document.getElementById("eventCard").classList.remove("show");
+    document.getElementById("pcSnap").textContent = fmtYear(curYear) + " · 大洋与海域";
+    document.getElementById("pcName").textContent = o.name.replace(/\s+/g, "");
+    document.getElementById("pcEn").textContent = o.en || "";
+    document.getElementById("pcMeta").innerHTML =
+      "<b>概况：</b>" + o.s + "<br><br><b>历史考点：</b>" + o.k;
+    document.getElementById("polityCard").classList.add("show");
+  }
+
   // 阴影滤镜
   const filter = svg.append("defs").append("filter").attr("id", "pinShadow")
     .attr("x", "-60%").attr("y", "-60%").attr("width", "220%").attr("height", "220%");
@@ -978,7 +1071,7 @@ const RIVERS_JSON = {"type":"FeatureCollection","features":[{"type":"Feature","p
 
   // 缩放：地图整体缩放；标号 1/√k 反向缩小；文字标注 1/k 保持屏幕字号恒定；
   // 河流/山脉名称仅放大后显示，避免铺满页面
-  svg.call(d3.zoom().scaleExtent([1, 6]).on("zoom", e => {
+  const zoomBehavior = d3.zoom().scaleExtent([1, 6]).on("zoom", e => {
     gRoot.attr("transform", e.transform);
     curK = e.transform.k;
     const s = 1 / Math.sqrt(e.transform.k);
@@ -992,15 +1085,24 @@ const RIVERS_JSON = {"type":"FeatureCollection","features":[{"type":"Feature","p
     document.querySelectorAll(".ev-item.z-gate-item").forEach(el => {
       el.style.display = curK >= +el.dataset.z ? "" : "none";
     });
-    const inv = 1 / e.transform.k;
-    gPolityLabels.selectAll("g").attr("transform", function () {
-      return d3.select(this).attr("data-trans") + " scale(" + inv + ")";
-    });
+        const inv = 1 / e.transform.k;
+        gPolityLabels.selectAll("g").attr("transform", function () {
+          return d3.select(this).attr("data-trans") + " scale(" + inv + ")";
+        });
+        gOcean.selectAll("g").attr("transform", function () {
+          return d3.select(this).attr("data-trans") + " scale(" + inv + ")";
+        });
+        gSea.selectAll("g").attr("transform", function () {
+          return d3.select(this).attr("data-trans") + " scale(" + inv + ")";
+        });
+        gSea.classed("on", e.transform.k >= 1.5);
     gGeoLabels.selectAll("g").attr("transform", function () {
       return d3.select(this).attr("data-trans") + " scale(" + inv + ")";
     });
     gGeoLabels.classed("on", e.transform.k >= 2);
-  }));
+  });
+  svg.call(zoomBehavior);
+  window.__zoomBehavior = zoomBehavior; // 供测试/URL 定位使用
 
   // 状态
   let curStage = 0, curStop = -1, curYear = -4000, lastVisCount = -1;
