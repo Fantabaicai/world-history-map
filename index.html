@@ -939,7 +939,28 @@ const RIVERS_JSON = {"type":"FeatureCollection","features":[{"type":"Feature","p
       k: "冰期『白令陆桥』是美洲原住民祖先的迁徙通道；1867年沙俄以720万美元将阿拉斯加售予美国。" },
     { name: "几内亚湾", lon: 1, lat: 1.5,
       s: "非洲西岸大海湾，古称『奴隶海岸』『黄金海岸』所在。",
-      k: "三角贸易『出程』的起运地——欧洲商船由此装载黑奴横渡大西洋。" }
+      k: "三角贸易『出程』的起运地——欧洲商船由此装载黑奴横渡大西洋。" },
+    { name: "爱琴海", lon: 25.4, lat: 38.2,
+      s: "希腊半岛与小亚细亚之间的多岛之海，古希腊航海文明的摇篮。",
+      k: "克里特—迈锡尼文明发源于此，是古希腊文明的源头；公元前480年萨拉米斯海战（希波战争）在此以少胜多。" },
+    { name: "亚得里亚海", lon: 15.6, lat: 42.3,
+      s: "亚平宁半岛与巴尔干半岛之间的狭长海域，威尼斯的『潟湖之海』。",
+      k: "中世纪威尼斯共和国凭此海的贸易成为地中海商业霸主——商业繁荣是文艺复兴兴起的经济土壤。" },
+    { name: "黑海", lon: 34.5, lat: 43,
+      s: "经博斯普鲁斯海峡与地中海相通，拜占庭时代即为核心的商贸之海。",
+      k: "1453年君士坦丁堡陷落，奥斯曼扼住黑海门户；近代沙俄为夺取黑海出海口多次对奥斯曼作战（克里米亚战争1853）。" },
+    { name: "里海", lon: 51, lat: 41.5,
+      s: "世界最大的湖泊（咸水湖），古称『里海』贯通欧亚草原南缘。",
+      k: "英俄19世纪在中亚『大博弈』的地理参照之一；草原丝路商队绕湖而行。" },
+    { name: "波斯湾", lon: 51.8, lat: 27,
+      s: "两河流域通往印度洋的门户，古代航路『迪尔蒙』一带。",
+      k: "亚历山大东征的军队曾至此；近代英国长期控制波斯湾——20世纪后成为世界石油运输的咽喉（霍尔木兹海峡）。" },
+    { name: "日本海", lon: 135.5, lat: 40.5,
+      s: "日本列岛与朝鲜半岛、大陆之间的边缘海。",
+      k: "元军两次东征日本（1274、1281年）横渡此海；1905年日俄战争对马海峡海战，日本击败俄国震动世界。" },
+    { name: "墨西哥湾", lon: -88.5, lat: 24.5,
+      s: "北美大陆东南的大海湾，西班牙殖民美洲的登陆门户。",
+      k: "1519年科尔特斯自此登陆征服阿兹特克（1521年）；近代北美种植园经济的对外贸易多经此海。" }
   ];
   function oceanLabel(g, o, fontSize, color) {
     const p = projection([o.lon, o.lat]);
@@ -951,18 +972,18 @@ const RIVERS_JSON = {"type":"FeatureCollection","features":[{"type":"Feature","p
       .attr("text-anchor", "middle")
       .attr("font-size", fontSize)
       .attr("font-style", "italic")
-      .attr("letter-spacing", fontSize >= 14 ? 3 : 0.5)
+      .attr("letter-spacing", fontSize >= 12 ? 2 : 0.5)
       .attr("fill", color)
-      .attr("fill-opacity", .92)
+      .attr("fill-opacity", .78)
       .attr("paint-order", "stroke")
       .attr("stroke", "#f4edde")
-      .attr("stroke-width", 2.6)
+      .attr("stroke-width", 2.2)
       .text(o.name)
       .on("click", () => showOceanCard(o));
     node.append("title").text(o.name + " · 点击查看海洋知识");
   }
-  OCEANS.forEach(o => oceanLabel(gOcean, o, 15.5, "#537d9b"));
-  SEAS.forEach(o => oceanLabel(gSea, o, 9.5, "#5c849c"));
+  OCEANS.forEach(o => oceanLabel(gOcean, o, 13, "#6d8ba1"));
+  SEAS.forEach(o => oceanLabel(gSea, o, 8.8, "#7b93a4"));
 
   function showOceanCard(o) {
     document.getElementById("eventCard").classList.remove("show");
