@@ -268,8 +268,6 @@
     margin-top: 2px;
   }
   .ev-item.active .ev-no { background: var(--seal); color: #fff; }
-  .ev-item.z-gate-item .ev-no { background: var(--seal); color: #fff; }
-  .ev-item.z-gate-item .ev-t::before { content: "❤ "; }
   .ev-body { flex: 1; }
   .ev-body .ev-year { font-size: 11.5px; color: var(--seal); letter-spacing: 1px; }
   .ev-body .ev-t { font-size: 14.5px; font-weight: 700; letter-spacing: .5px; margin-top: 1px; }
@@ -1253,16 +1251,11 @@ const CHINA_ADMIN_JSON = {"eras":[{"id":"zhou","tag":"西周·分封制","type":
     return st;
   }
 
-  // 彩蛋心形：基础尺寸小、随倍率渐大渐显——总览不显眼，靠近放大才逐渐看清
-  function updateEggHearts() {
+  // 彩蛋型标号：达到门槛倍率才显示，平日完全隐身
+  function updateEggGates() {
     gMarks.selectAll("g.z-gate").each(function () {
       const zz = +d3.select(this).attr("data-z"), on = curK >= zz;
       d3.select(this).selectAll(".egg-dot").style("display", on ? null : "none");
-      const h = d3.select(this).select(".egg-heart");
-      if (!h.empty()) {
-        h.attr("transform", "scale(" + Math.pow(curK, .75) + ")")
-         .style("opacity", on ? 0 : Math.min(.75, .32 + curK * .14));
-      }
     });
   }
 
@@ -1275,8 +1268,8 @@ const CHINA_ADMIN_JSON = {"eras":[{"id":"zhou","tag":"西周·分封制","type":
     gMarks.selectAll("g").attr("transform", function () {
       return d3.select(this).attr("data-trans") + " scale(" + s + ")";
     });
-    // 彩蛋型标号：小红心随放大渐显，达到倍率后切换为正式编号标点
-    updateEggHearts();
+    // 彩蛋型标号：放大到门槛倍率才现身
+    updateEggGates();
     // 中国行政区划层：门控 + 标注字号恒定 + 角标显隐
     applyAdminZoomState();
         const inv = 1 / e.transform.k;
@@ -1496,19 +1489,15 @@ const CHINA_ADMIN_JSON = {"eras":[{"id":"zhou","tag":"西周·分封制","type":
         .text(i + 1);
       g.append("title").text(ev.year + " " + ev.t);
       if (ev.z) {
-        // 彩蛋型史事：未放大时以半透明心形作线索（可点击），放大后变成正式标点
+        // 彩蛋型史事：放大到指定倍率才出现，平日完全隐身
         g.attr("data-z", ev.z).classed("z-gate", true);
         g.select(".halo").classed("egg-dot", true);
         g.select(".dot").classed("egg-dot", true);
         g.select(".num").classed("egg-dot", true);
-        g.append("path").attr("class", "egg-heart")
-          .attr("d", "M0,2.04 C-0.9,0.54 -2.76,-0.66 -2.76,-1.92 C-2.76,-3.18 -1.44,-3.66 0,-2.16 C1.44,-3.66 2.76,-3.18 2.76,-1.92 C2.76,-0.66 0.9,0.54 0,2.04 Z")
-          .attr("fill", "#b03a2e")
-          .style("pointer-events", "none");
+        if (curK < ev.z) g.selectAll(".egg-dot").style("display", "none");
       }
       markNodes[i] = g;
     });
-    updateEggHearts();
   }
 
   function renderList() {
@@ -1527,8 +1516,7 @@ const CHINA_ADMIN_JSON = {"eras":[{"id":"zhou","tag":"西周·分封制","type":
         '</div>';
       item.onclick = () => selectStop(i);
       if (ev.z) {
-        // 彩蛋条目：常驻显示，带 ❤ 标识
-        item.classList.add("z-gate-item");
+        // 彩蛋条目：外观与普通条目一致，不做任何特殊标识
         item.dataset.z = ev.z;
       }
       list.appendChild(item);
