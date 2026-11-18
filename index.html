@@ -962,6 +962,19 @@ const RIVERS_JSON = {"type":"FeatureCollection","features":[{"type":"Feature","p
   function stageStartYear(st) {
     return parseYear(String(st.years).split("—")[0]);
   }
+  // 按年份反查所属阶段：先找区间命中的；没有命中（阶段间有空隙）就取最近的
+  function stageIndexForYear(y) {
+    let st = STAGES.findIndex(s => y >= stageStartYear(s) && y <= stageEndYear(s));
+    if (st < 0) {
+      st = 0;
+      let best = Infinity;
+      STAGES.forEach((s, i) => {
+        const d = Math.min(Math.abs(y - stageStartYear(s)), Math.abs(y - stageEndYear(s)));
+        if (d < best) { best = d; st = i; }
+      });
+    }
+    return st;
+  }
 
   // 缩放：地图整体缩放；标号 1/√k 反向缩小；文字标注 1/k 保持屏幕字号恒定；
   // 河流/山脉名称仅放大后显示，避免铺满页面
@@ -1274,6 +1287,17 @@ const RIVERS_JSON = {"type":"FeatureCollection","features":[{"type":"Feature","p
     curYear = Math.max(SLIDER_MIN, Math.min(SLIDER_MAX, y));
     slider.value = curYear;
     tbYear.textContent = fmtYear(curYear);
+    // 拖动时间轴时，顶部专题板块同步切换到年份所属阶段
+    if (!stageSyncGuard) {
+      const si = stageIndexForYear(curYear);
+      if (si !== curStage) {
+        curStage = si;
+        renderStageStatic();
+        lastVisCount = -1;
+        const chip = stagebar.children[curStage];
+        if (chip && chip.scrollIntoView) chip.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+      }
+    }
     renderHist();
     const vc = visibleEvents().length;
     if (vc !== lastVisCount) {
@@ -1321,12 +1345,16 @@ const RIVERS_JSON = {"type":"FeatureCollection","features":[{"type":"Feature","p
   }
   btnPlay.onclick = togglePlay;
 
+  // 主动切阶段（点板块/上下键）时置真，防止 setYear 按年份把阶段弹回别的板块
+  let stageSyncGuard = false;
   function setStage(n, stop) {
     stopPlay();
     curStage = Math.max(0, Math.min(STAGES.length - 1, n));
     renderStageStatic();
     lastVisCount = -1;
+    stageSyncGuard = true;
     setYear(stageEndYear(STAGES[curStage]), true);
+    stageSyncGuard = false;
     if (stop) selectStop(stop - 1);
   }
 
@@ -1357,16 +1385,7 @@ const RIVERS_JSON = {"type":"FeatureCollection","features":[{"type":"Feature","p
   const qStage = parseInt(q.get("stage") || "", 10);
   if (qYear !== null && !isNaN(parseYear(qYear)) && !qStage) {
     const y = /^[+-]?\d+$/.test(qYear.trim()) ? parseInt(qYear, 10) : parseYear(qYear);
-    let st = STAGES.findIndex(s => y >= stageStartYear(s) && y <= stageEndYear(s));
-    if (st < 0) {
-      st = 0;
-      let best = Infinity;
-      STAGES.forEach((s, i) => {
-        const d = Math.min(Math.abs(y - stageStartYear(s)), Math.abs(y - stageEndYear(s)));
-        if (d < best) { best = d; st = i; }
-      });
-    }
-    curStage = st;
+    curStage = stageIndexForYear(y);
     renderStageStatic();
     lastVisCount = -1;
     setYear(y, true);
