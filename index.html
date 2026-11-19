@@ -128,12 +128,17 @@
   #colonyTag i:first-child { margin-left: 0; }
   .sw-c { background: repeating-linear-gradient(45deg, #a8563a 0 3px, rgba(168,86,58,.25) 3px 6px); border: 1px solid #8a4a2f; }
   .sw-s { background: repeating-linear-gradient(45deg, #4a6a8a 0 3px, rgba(74,106,138,.25) 3px 6px); border: 1px solid #3a5a7a; }
-  /* 历史名城与地形区 */
+  /* 历史名城与地形区：总览隐藏，放大后浮现 */
+  .terrain-layer, .terrain-labels, .cities-layer, .cities-labels { opacity: 0; transition: opacity .35s ease; }
+  .terrain-layer.on, .terrain-labels.on, .cities-layer.on, .cities-labels.on { opacity: 1; }
   .terrain-layer { pointer-events: none; }
   .terrain-labels text { pointer-events: auto; cursor: pointer; }
+  .terrain-labels:not(.on) text { pointer-events: none; }
   .terrain-labels text { font-style: italic; letter-spacing: 1px; }
+  .cities-layer:not(.on) circle { pointer-events: none; }
   .cities-layer circle { pointer-events: auto; cursor: pointer; }
   .cities-labels text { pointer-events: auto; cursor: pointer; }
+  .cities-labels:not(.on) text { pointer-events: none; }
   /* 网格线纯装饰，不拦截点击 */
   .grid-layer { pointer-events: none; }
   /* 政权名标注：不拦截点击 */
@@ -1369,6 +1374,7 @@ const COLONIAL_JSON = {"1700":[{"n":"Viceroyalty of Peru","lord":"西班牙","ki
       const g = gTerrainL.append("g")
         .attr("transform", "translate(" + c[0] + "," + c[1] + ")")
         .attr("data-trans", "translate(" + c[0] + "," + c[1] + ")");
+      if (t.pri === 2) g.classed("t-l2", true).style("display", curK >= 1.8 ? null : "none");
       const txt = g.append("text")
         .attr("text-anchor", "middle")
         .attr("dy", "0.33em")
@@ -1548,7 +1554,13 @@ const COLONIAL_JSON = {"1700":[{"n":"Viceroyalty of Peru","lord":"西班牙","ki
     gColonialL.selectAll("g").attr("transform", function () {
       return d3.select(this).attr("data-trans") + " scale(" + inv + ")";
     });
-    // 历史名城：圆点随 1/√k 缩放；标注字号恒定；次要城市放大1.5倍后显示
+    // 名城与地形区：放大1.4倍浮现；次要标注1.8倍；字号恒定
+    const geoOn = curK >= 1.4;
+    gTerrain.classed("on", geoOn);
+    gTerrainL.classed("on", geoOn);
+    gTerrainL.selectAll("g.t-l2").style("display", curK >= 1.8 ? null : "none");
+    gCities.classed("on", geoOn);
+    gCitiesL.classed("on", geoOn);
     gCities.selectAll("g").attr("transform", function () {
       return d3.select(this).attr("data-trans") + " scale(" + s + ")";
     });
