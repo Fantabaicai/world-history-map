@@ -747,7 +747,7 @@ const STAGES = [
       {year:"1997.7", lon:114.17, lat:22.30, t:"香港回归·一国两制实践", s:"7月1日零时，五星红旗在香港会展中心升起，百年屈辱的最后一页翻过。『一国两制』开启新实践；1999年12月澳门随之回归祖国。", k:"『一国两制』与中英联合声明；与1842《南京条约》割让香港首尾呼应——近代史与现代史的闭环，统一大业的里程碑。"},
       {year:"2001", lon:51.50, lat:25.30, t:"中国加入世界贸易组织", s:"11月多哈部长级会议通过中国加入世贸组织决定，12月11日正式成为成员。中国更深融入经济全球化，此后货物贸易跃居世界第一，2010年成为世界第二大经济体。", k:"经济全球化与中国：机遇（参与国际分工、市场扩大）与挑战（竞争加剧、规则约束）并存；中国从全球化的参与者到贡献者——构建人类命运共同体理念的背景。"},
       {year:"2012", lon:116.40, lat:39.90, t:"中国特色社会主义进入新时代", s:"2012年中共十八大召开，中国特色社会主义进入新时代；2017年中共十九大确立习近平新时代中国特色社会主义思想为党的指导思想并写入党章。", k:"新时代社会主要矛盾的转化：人民日益增长的美好生活需要和不平衡不充分的发展之间的矛盾——纲要上第九单元收官考点。"},
-      {year:"2018", lon:113.24, lat:35.22, t:"秦珂先生与姬志敏女士在一起", s:"2018年，秦珂先生与姬志敏女士在河南焦作走到了一起。山河为证，岁月为名——这是本地图上最年轻的一条史事，也是编者最愿意记下的一条。放大地图到焦作，才能找到它。", q:"愿得一心人，白头不相离。", src:"卓文君《白头吟》", k:"本条不在考试范围。属『人生史』，考点自行拓展。", z:2}
+      {year:"2018", lon:113.24, lat:35.22, t:"秦珂先生与姬志敏女士在一起", s:"2018年，秦珂先生与姬志敏女士在河南焦作走到了一起。山河为证，岁月为名——这是本地图上最年轻的一条史事，也是编者最愿意记下的一条。放大地图到焦作，才能找到它。", q:"愿得一心人，白头不相离。", src:"卓文君《白头吟》", k:"本条不在考试范围。属『人生史』，考点自行拓展。", z:3}
     ],
     routes: []
   }
@@ -1802,10 +1802,12 @@ const COLONIAL_JSON = {"1700":[{"n":"Viceroyalty of Peru","lord":"西班牙","ki
         .style("cursor", "pointer")
         .on("click", function () { selectStop(i); })
         .on("mouseenter", function () {
+          if (d3.select(this).classed("z-gate")) return; // 彩蛋点不随悬停放大
           const sel = d3.select(this).classed("sel");
           d3.select(this).select(".dot").attr("r", sel ? 8.5 : 7.5);
         })
         .on("mouseleave", function () {
+          if (d3.select(this).classed("z-gate")) return;
           const sel = d3.select(this).classed("sel");
           d3.select(this).select(".dot").attr("r", sel ? 8.5 : 6);
         });
@@ -1831,12 +1833,17 @@ const COLONIAL_JSON = {"1700":[{"n":"Viceroyalty of Peru","lord":"西班牙","ki
         .text(i + 1);
       g.append("title").text(ev.year + " " + ev.t);
       if (ev.z) {
-        // 彩蛋型史事：放大到指定倍率才出现，平日完全隐身
+        // 彩蛋型史事：深放大(≥3倍)才现身；现身时也是一颗与城市圆点无异的深色小点，不显山露水
         g.attr("data-z", ev.z).classed("z-gate", true);
-        g.select(".halo").classed("egg-dot", true);
-        g.select(".dot").classed("egg-dot", true);
-        g.select(".num").classed("egg-dot", true);
-        if (curK < ev.z) g.selectAll(".egg-dot").style("display", "none");
+        g.select(".halo").style("display", "none");
+        g.select(".num").style("display", "none");
+        g.select(".dot").attr("r", 2.2)
+          .attr("fill", "#5f4630")
+          .attr("stroke", "#f7f0df")
+          .attr("stroke-width", 1)
+          .attr("filter", null)
+          .classed("egg-dot", true);
+        if (curK < ev.z) g.select(".egg-dot").style("display", "none");
       }
       markNodes[i] = g;
     });
@@ -1846,6 +1853,7 @@ const COLONIAL_JSON = {"1700":[{"n":"Viceroyalty of Peru","lord":"西班牙","ki
     const list = document.getElementById("eventList");
     list.innerHTML = "";
     visibleEvents().forEach(({ ev, i }) => {
+      if (ev.z) return; // 彩蛋条目不进列表，只在地图深放大处现身
       const item = document.createElement("div");
       item.className = "ev-item";
       item.dataset.i = i;
@@ -1871,6 +1879,7 @@ const COLONIAL_JSON = {"1700":[{"n":"Viceroyalty of Peru","lord":"西班牙","ki
     document.getElementById("polityCard").classList.remove("show");
     Object.keys(markNodes).forEach(k => {
       const g = markNodes[k], sel = +k === i;
+      if (g.classed("z-gate")) return; // 彩蛋点保持隐匿样式，不参与选中态重置
       g.classed("sel", sel);
       g.select(".dot")
         .attr("r", sel ? 8.5 : 6)
