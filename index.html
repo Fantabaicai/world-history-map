@@ -131,6 +131,12 @@
   /* 历史名城与地形区：总览隐藏，放大后浮现 */
   .route-labels { pointer-events: none; }
   .route-labels text { pointer-events: auto; cursor: pointer; }
+  /* 航线动态效果：虚线流动 + 沿线光点 */
+  @keyframes routeFlow { to { stroke-dashoffset: -22; } }
+  .route-flow { animation: routeFlow 1.5s linear infinite; }
+  @media (prefers-reduced-motion: reduce) {
+    .route-flow { animation: none; }
+  }
   .terrain-layer, .terrain-labels, .cities-layer, .cities-labels { opacity: 0; transition: opacity .35s ease; }
   .terrain-layer.on, .terrain-labels.on, .cities-layer.on, .cities-labels.on { opacity: 1; }
   .terrain-layer { pointer-events: none; }
@@ -376,6 +382,14 @@
     cursor: pointer; transition: all .18s; align-self: center;
   }
   #glossBtn:hover { background: var(--seal); color: #fdf6e6; border-color: var(--seal-dark); }
+  #animBtn {
+    padding: 5px 13px; background: var(--card); color: var(--blue);
+    border: 1px solid var(--line); border-radius: 3px;
+    font-family: inherit; font-size: 12.5px; letter-spacing: 1px;
+    cursor: pointer; transition: all .18s; align-self: center;
+  }
+  #animBtn:hover { color: var(--seal); border-color: var(--seal); }
+  body.route-anim-off .route-flow { animation: none; }
   #gloss { position: fixed; inset: 0; z-index: 900; display: none; background: rgba(43,38,32,.48); }
   #gloss.show { display: flex; align-items: center; justify-content: center; }
   .gloss-card {
@@ -451,6 +465,7 @@
     <h1>寰宇纪事<span class="sealchar"> · </span>世界历史大事地图</h1>
     <span class="sub">自制教学演示版</span>
     <button id="glossBtn" title="高考历史名词解释知识库（2269条，可搜索）">名词解释库</button>
+    <button id="animBtn" title="暂停 / 播放航线流动动画">暂停航线动画</button>
   </div>
   <div class="stagebar" id="stagebar"></div>
 </header>
@@ -2006,8 +2021,28 @@ const GAO_KAO_TERMS = [{"t":"鸦片贸易","c":"近代西方殖民者为攫取�
         .attr("stroke-linecap", "round")
         .attr("opacity", .85)
         .attr("vector-effect", "non-scaling-stroke")
+        .attr("class", "route-flow")
         .style("pointer-events", "none");
       rp.append("title").text(r.name);
+      // 沿线航行的光点（SVG animateMotion，方向沿路线起点→终点）
+      try {
+        const rnode = rp.node();
+        if (rnode && rnode.getTotalLength) {
+          const dur = Math.min(15, Math.max(6, rnode.getTotalLength() / 65));
+          const dot = gRoutes.append("circle")
+            .attr("r", 2.6)
+            .attr("fill", ROUTE_COLORS[r.c % ROUTE_COLORS.length])
+            .attr("stroke", "#fdf6e6")
+            .attr("stroke-width", .8)
+            .attr("opacity", .95)
+            .style("pointer-events", "none");
+          const am = document.createElementNS("http://www.w3.org/2000/svg", "animateMotion");
+          am.setAttribute("dur", dur.toFixed(1) + "s");
+          am.setAttribute("repeatCount", "indefinite");
+          am.setAttribute("path", path(line));
+          dot.node().appendChild(am);
+        }
+      } catch (err) { /* 动画创建失败不影响静态航线 */ }
       // 航线名称：浅浅标在路径中点上方，小字，可点击弹知识卡
       const node = rp.node();
       if (node && node.getTotalLength) {
@@ -2411,6 +2446,15 @@ const GAO_KAO_TERMS = [{"t":"鸦片贸易","c":"近代西方殖民者为攫取�
     setTimeout(function () { searchEl.focus(); }, 60);
   }
   document.getElementById("glossBtn").addEventListener("click", openGloss);
+  const animBtnEl = document.getElementById("animBtn");
+  animBtnEl.addEventListener("click", function () {
+    const off = document.body.classList.toggle("route-anim-off");
+    animBtnEl.textContent = off ? "▶ 播放航线动画" : "暂停航线动画";
+    const svg = document.getElementById("map");
+    if (svg && svg.pauseAnimations) {
+      try { off ? svg.pauseAnimations() : svg.unpauseAnimations(); } catch (err) { /* ignore */ }
+    }
+  });
   document.getElementById("glossClose").addEventListener("click", function () { gloss.classList.remove("show"); });
   gloss.addEventListener("click", function (e) { if (e.target === gloss) gloss.classList.remove("show"); });
   document.addEventListener("keydown", function (e) {
